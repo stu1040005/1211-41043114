@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AQI Data</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <!-- 導覽列 -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <div class="container-fluid">
+          <a class="navbar-brand" href="index.html">API範例</a>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+          </button>
+          <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav">
+              <li class="nav-item">
+                <a class="nav-link" href="stocks.html">股票資訊</a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="meteorological.html">氣象資訊</a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="air.html">空氣品質</a>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </nav>
+    <div class="container mt-4">
+        <h1 class="text-center">AQI Data</h1>
+        <div class="row mb-3">
+            <div class="col-md-6 offset-md-3">
+                <input type="text" id="search-input" class="form-control" placeholder="搜尋測站名稱或縣市...">
+            </div>
+        </div>
+        <table class="table table-striped table-bordered mt-3">
+            <thead>
+                <tr>
+                    <th scope="col" data-sort="sitename">測站名稱</th>
+                    <th scope="col" data-sort="county">縣市</th>
+                    <th scope="col" data-sort="aqi">AQI</th>
+                    <th scope="col" data-sort="pollutant">污染物</th>
+                    <th scope="col" data-sort="status">狀態</th>
+                    <th scope="col" data-sort="publishTime">發布時間</th>
+                </tr>
+            </thead>
+            <tbody id="data-table">
+                <tr>
+                    <td colspan="6" class="text-center">Loading...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        const apiUrl = "https://data.moenv.gov.tw/api/v2/aqx_p_432?api_key=e8dd42e6-9b8b-43f8-991e-b3dee723a52d&limit=1000&sort=ImportDate desc&format=JSON";
+        let allRecords = [];
+
+        // Fetch data from API
+        fetch(apiUrl)
+            .then(response => response.json())
+            .then(data => {
+                allRecords = data.records;
+                renderTable(allRecords);
+            })
+            .catch(error => {
+                console.error("Error fetching data:", error);
+                const tableBody = document.getElementById("data-table");
+                tableBody.innerHTML = "<tr><td colspan='6' class='text-center text-danger'>Failed to load data</td></tr>";
+            });
+
+        // Render table with records
+        function renderTable(records) {
+            const tableBody = document.getElementById("data-table");
+            tableBody.innerHTML = "";
+
+            if (records.length === 0) {
+                tableBody.innerHTML = "<tr><td colspan='6' class='text-center'>No data found</td></tr>";
+                return;
+            }
+
+            records.forEach(record => {
+                const row = document.createElement("tr");
+
+                row.innerHTML = `
+                    <td>${record.sitename }</td>
+                    <td>${record.county }</td>
+                    <td>${record.aqi}</td>
+                    <td>${record.pollutant || "無"}</td>
+                    <td>${record.status}</td>
+                    <td>${record.publishtime}</td>
+                `;
+
+                tableBody.appendChild(row);
+            });
+
+            // Attach sorting event listeners
+            document.querySelectorAll("th[data-sort]").forEach(th => {
+                th.addEventListener("click", () => {
+                    sortTable(th.getAttribute("data-sort"));
+                });
+            });
+        }
+
+        // Sort table function
+        function sortTable(key) {
+            const sortedRecords = allRecords.slice().sort((a, b) => {
+                if (typeof a[key] === "string") {
+                    return a[key].localeCompare(b[key]);
+                } else {
+                    return a[key] - b[key];
+                }
+            });
+
+            renderTable(sortedRecords);
+        }
+
+        // Add search functionality
+        document.getElementById("search-input").addEventListener("input", function () {
+            const searchValue = this.value.toLowerCase();
+            const filteredRecords = allRecords.filter(record => 
+                (record.sitename && record.sitename.toLowerCase().includes(searchValue)) ||
+                (record.county && record.county.toLowerCase().includes(searchValue))
+            );
+            renderTable(filteredRecords);
+        });
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
